@@ -5,8 +5,15 @@ from sklearn.neighbors import NearestNeighbors
 import joblib
 import streamlit as st
 
-# Load and preprocess the dataset
-df = pd.read_csv('modified_Housing_Data.csv')
+
+# URL to download the file
+url = 'https://drive.google.com/file/d/183NSodNdbgNBKeNsTtb5wbqfpBz1vB0L/view?usp=drive_link'
+
+# Read the CSV file directly from the link
+df = pd.read_csv(url)
+
+# Proceed with your operations on the dataframe
+
 
 # Handle NaN or Inf values
 df.replace([np.inf, -np.inf], np.nan, inplace=True)
