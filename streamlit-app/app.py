@@ -4,15 +4,22 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.neighbors import NearestNeighbors
 import joblib
 import streamlit as st
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
 
 
-# URL to download the file
-url = 'https://drive.google.com/file/d/183NSodNdbgNBKeNsTtb5wbqfpBz1vB0L/view?usp=drive_link'
+# Replace the URL with your actual GitHub raw file URL
+url = 'https://raw.githubusercontent.com/ISZM13/real-estate-site/main/streamlit-app/modified_Housing_Data.csv'
 
-# Read the CSV file directly from the link
-df = pd.read_csv(url)
+# Read the CSV file directly from the URL
+try:
+    df = pd.read_csv(url)
+    print(df.head())  # Display the first few rows
+except pd.errors.ParserError as e:
+    print("Error parsing the CSV file:", e)
+except Exception as e:
+    print("An error occurred:", e)
 
-# Proceed with your operations on the dataframe
 
 
 # Handle NaN or Inf values

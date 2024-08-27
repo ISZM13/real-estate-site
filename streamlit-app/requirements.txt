@@ -10,3 +10,4 @@ seaborn==0.13.2
 streamlit==1.34.0
 virtualenv==20.26.1
 yfinance==0.2.38
+pydrive==1.3.1
