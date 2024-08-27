@@ -6,7 +6,7 @@ import joblib
 import streamlit as st
 
 # Load and preprocess the dataset
-df = pd.read_csv('datasets/ modified_Housing_Data.csv')
+df = pd.read_csv('modified_Housing_Data.csv')
 
 # Handle NaN or Inf values
 df.replace([np.inf, -np.inf], np.nan, inplace=True)
