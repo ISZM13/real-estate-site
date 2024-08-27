@@ -1,58 +1,131 @@
-import streamlit as st
 import pandas as pd
-from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.preprocessing import StandardScaler
 import numpy as np
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.neighbors import NearestNeighbors
+import joblib
+import streamlit as st
 
-# Load the preprocessed dataset
-df = pd.read_csv('modified_Housing_Data.csv')
+# Load and preprocess the dataset
+df = pd.read_csv('datasets/ modified_Housing_Data.csv')
 
-# Streamlit title
-st.title('Property Recommendation Engine')
+# Handle NaN or Inf values
+df.replace([np.inf, -np.inf], np.nan, inplace=True)
+df.dropna(inplace=True)
 
-# User input
-suburb = st.selectbox('Select Suburb', df['Suburb_Target_Price'].unique())
-rooms = st.number_input('Number of Rooms', min_value=1, max_value=10, value=1)
-property_type = st.selectbox('Property Type', df['Type_Encoded'].unique())
-price = st.number_input('Max Price', min_value=0, value=1000000)
-distance = st.number_input('Distance from City (km)', min_value=0.0, value=10.0)
-bedroom2 = st.number_input('Number of Bedrooms', min_value=1, max_value=10, value=1)
-bathroom = st.number_input('Number of Bathrooms', min_value=1, max_value=10, value=1)
-car = st.number_input('Number of Car Spaces', min_value=0, max_value=10, value=1)
-landsize = st.number_input('Landsize (sqm)', min_value=0, value=500)
-building_area = st.number_input('Building Area (sqm)', min_value=0, value=100)
-year_built = st.number_input('Year Built', min_value=1900, max_value=2024, value=2000)
+# Initialize encoders
+label_encoders = {}
+categorical_columns = ['Distance_Category']
 
-# Prepare user input DataFrame
+# Encode categorical columns
+for column in categorical_columns:
+    le = LabelEncoder()
+    df[column] = le.fit_transform(df[column])
+    label_encoders[column] = le
+
+# Prepare features and target
+df_features = df.drop(columns=['Suburb_Target_Price'])  # Drop the target variable
+df_features = df_features.astype(float)
+
+# Scale the features
+scaler = StandardScaler()
+df_scaled = scaler.fit_transform(df_features)
+
+# Train NearestNeighbors model
+model = NearestNeighbors(n_neighbors=10)  # Find top 10 nearest neighbors
+model.fit(df_scaled)
+
+# Save the model and scaler
+joblib.dump(model, 'model.joblib')
+joblib.dump(scaler, 'scaler.joblib')
+joblib.dump(label_encoders, 'label_encoders.joblib')
+
+# Streamlit app layout
+st.title('Property Recommendation System')
+
+# Load the trained model and scaler
+model = joblib.load('model.joblib')
+scaler = joblib.load('scaler.joblib')
+label_encoders = joblib.load('label_encoders.joblib')
+
+# Function to preprocess user input
+def preprocess_user_input(user_input):
+    # Ensure column names match
+    user_input = user_input.rename(columns={
+        'Bedroom-to-Bathroom Ratio': 'Bedroom-to-bathroom Ratio',
+        'Land-to-Building Ratio': 'Land-to-building Ratio'
+    })
+    
+    # Handle unseen labels in categorical columns
+    for column, le in label_encoders.items():
+        if column in user_input.columns:
+            # Add new categories to the encoder if needed
+            existing_labels = set(le.classes_)
+            user_labels = set(user_input[column].unique())
+            new_labels = user_labels - existing_labels
+            if new_labels:
+                # Print or log the new labels (you can choose to handle this differently)
+                print(f"New labels detected for {column}: {new_labels}")
+                
+                # Map new labels to a default value, such as the most frequent label
+                default_value = le.transform([le.classes_[0]])[0]
+                user_input[column] = user_input[column].apply(lambda x: le.transform([x])[0] if x in existing_labels else default_value)
+            else:
+                user_input[column] = le.transform(user_input[column])
+    
+    # Ensure user input data is of type float
+    user_input = user_input.astype(float)
+    
+    # Scale the user input
+    user_input_scaled = scaler.transform(user_input)
+    
+    return user_input_scaled
+
+# Function to get recommendations
+def get_recommendations(user_input):
+    # Ensure the columns match the training data
+    expected_columns = df_features.columns
+    # Ensure all required columns are present
+    user_input = user_input[expected_columns]
+    
+    user_input_scaled = preprocess_user_input(user_input)
+    distances, indices = model.kneighbors(user_input_scaled)
+    top_indices = indices[0]  # Get indices of nearest neighbors
+    return df.iloc[top_indices]
+
+# User input form
+st.sidebar.header('User Input')
+user_rooms = st.sidebar.number_input('Rooms', min_value=1, value=3)
+user_car = st.sidebar.number_input('Car', min_value=0, value=1)
+user_region = st.sidebar.selectbox('Region', df['Regionlabel'].unique())
+user_suburb_target_price = st.sidebar.number_input('Suburb Target Price', value=0)
+user_council_area = st.sidebar.selectbox('Council Area', df['Council_Area_Encoded'].unique())
+user_type = st.sidebar.selectbox('Type', df['Type_Encoded'].unique())
+user_method = st.sidebar.selectbox('Method', df['Method_Encoded'].unique())
+user_bedroom_bathroom_ratio = st.sidebar.number_input('Bedroom-to-Bathroom Ratio', value=1.0)
+user_land_building_ratio = st.sidebar.number_input('Land-to-Building Ratio', value=1.0)
+user_age_building = st.sidebar.number_input('Age of Building', value=10)
+user_distance_category = st.sidebar.selectbox('Distance Category', df['Distance_Category'].unique())
+user_age_building_log = st.sidebar.number_input('Age of Building Log', value=2.0)
+
+# Create a DataFrame from user input
 user_input = pd.DataFrame({
-    'Suburb_Target_Price': [suburb],
-    'Rooms': [rooms],
-    'Type_Encoded': [property_type],
-    'Price': [price],
-    'Distance': [distance],
-    'Bedroom-to-bathroom Ratio': [bedroom2 / bathroom],
-    'Land-to-building Ratio': [building_area / landsize],
-    'Age of Building': [2024 - year_built],
-    'Age of Building Log': [np.log(2024 - year_built) if 2024 - year_built > 0 else 0]  # Avoid log(0)
+    'Rooms': [user_rooms],
+    'Car': [user_car],
+    'Regionlabel': [user_region],
+    'Suburb_Target_Price': [user_suburb_target_price],
+    'Council_Area_Encoded': [user_council_area],
+    'Type_Encoded': [user_type],
+    'Method_Encoded': [user_method],
+    'Bedroom-to-bathroom Ratio': [user_bedroom_bathroom_ratio],
+    'Land-to-building Ratio': [user_land_building_ratio],
+    'Age of Building': [user_age_building],
+    'Distance_Category': [user_distance_category],
+    'Age of Building Log': [user_age_building_log]
 })
 
-# Convert Distance to numeric and categorize
-user_input['Distance'] = pd.to_numeric(user_input['Distance'], errors='coerce')
-user_input['Distance_Category'] = pd.cut(user_input['Distance'], bins=[0, 5, 15, float('inf')], labels=['Near', 'Medium', 'Far'])
-
-# Preprocess user input similar to the dataset
-scaler = StandardScaler()
-df_scaled = scaler.fit_transform(df.drop(columns=['Price']))
-user_input_scaled = scaler.transform(user_input.drop(columns=['Distance_Category']))
-
-# Calculate cosine similarity
-similarity_matrix = cosine_similarity(user_input_scaled, df_scaled)
-similarities = similarity_matrix[0]
-
-# Get top 10 similar properties
-top_indices = similarities.argsort()[-10:][::-1]
-recommendations = df.iloc[top_indices]
+# Get recommendations
+recommendations = get_recommendations(user_input)
 
 # Display recommendations
-st.write("Top Recommendations:")
-st.dataframe(recommendations[['Suburb_Target_Price', 'Rooms', 'Type_Encoded', 'Price', 'Distance_Category', 'Bedroom-to-bathroom Ratio', 'Land-to-building Ratio', 'Age of Building', 'Age of Building Log']].reset_index(drop=True))
+st.write('Top 10 Property Recommendations:')
+st.write(recommendations)
