@@ -1,30 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import PropertyCard from '../components/PropertyCard';
-import FilterBar from '../components/FilterBar';
-import propertyService from '../services/propertyService';
 
 const PropertyListPage = () => {
-  const [properties, setProperties] = useState([]);
+    // Fetch properties from API or use dummy data
+    const properties = [
+        { title: 'Modern Villa', description: 'A modern villa with a pool', price: 800000 },
+        { title: 'Country Cottage', description: 'A cozy country cottage', price: 300000 },
+    ];
 
-  useEffect(() => {
-    const fetchProperties = async () => {
-      const data = await propertyService.getProperties();
-      setProperties(data);
-    };
-    fetchProperties();
-  }, []);
-
-  return (
-    <div>
-      <h1>Property Listings</h1>
-      <FilterBar />
-      <div>
-        {properties.map((property) => (
-          <PropertyCard key={property._id} property={property} />
-        ))}
-      </div>
-    </div>
-  );
+    return (
+        <div>
+            <h1>Property Listings</h1>
+            <div>
+                {properties.map((property, index) => (
+                    <PropertyCard key={index} property={property} />
+                ))}
+            </div>
+        </div>
+    );
 };
 
 export default PropertyListPage;

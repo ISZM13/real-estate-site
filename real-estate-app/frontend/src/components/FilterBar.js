@@ -1,12 +1,12 @@
 import React from 'react';
 
 const FilterBar = () => {
-  return (
-    <div>
-      <h4>Filter Properties</h4>
-      {/* Add filters for type, price, location, etc. */}
-    </div>
-  );
+    return (
+        <div>
+            <input type="text" placeholder="Search..." />
+            <button>Filter</button>
+        </div>
+    );
 };
 
 export default FilterBar;

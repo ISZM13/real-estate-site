@@ -1,15 +1,19 @@
 const express = require('express');
+const cors = require('cors');
+const bodyParser = require('body-parser');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
-const propertyRoutes = require('./routes/propertyRoutes');
 
 const app = express();
 
+// Connect to the database
 connectDB();
 
-app.use(express.json());
+// Middleware
+app.use(cors());
+app.use(bodyParser.json());
 
+// Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/properties', propertyRoutes);
 
 module.exports = app;
